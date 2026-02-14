@@ -49,6 +49,7 @@ repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
 before-all = "bash scripts/build_redis.sh && bash scripts/download_falkordb.sh"
+repair-wheel-command = ""
 
 [tool.cibuildwheel.environment]
 REDIS_VERSION = "8.2.3"
