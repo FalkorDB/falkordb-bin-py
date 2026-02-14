@@ -65,7 +65,7 @@ jobs:
           echo "REDIS_VERSION=${{ github.event.inputs.redis_version || '8.2.3' }}" >> "$GITHUB_ENV"
           echo "FALKORDB_VERSION=${{ github.event.inputs.falkordb_version || 'v4.16.3' }}" >> "$GITHUB_ENV"
 
-      - uses: pypa/cibuildwheel@v2.23.2
+      - uses: pypa/cibuildwheel@v3.3.1
         env:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_ENVIRONMENT: >-
