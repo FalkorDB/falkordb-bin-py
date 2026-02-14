@@ -15,8 +15,12 @@ case "${ARCH}" in
 esac
 
 python -m wheel tags \
+  --help >/dev/null 2>&1 || {
+  python -m pip install --disable-pip-version-check --no-cache-dir wheel
+}
+
+python -m wheel tags \
   --platform-tag "${PLATFORM_TAG}" \
   --remove \
   --wheel-dir "${DEST_DIR}" \
   "${WHEEL_PATH}"
-
