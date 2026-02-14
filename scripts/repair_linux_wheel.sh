@@ -19,8 +19,13 @@ python -m wheel tags \
   python -m pip install --disable-pip-version-check --no-cache-dir wheel
 }
 
-python -m wheel tags \
+NEW_WHEEL="$(python -m wheel tags \
   --platform-tag "${PLATFORM_TAG}" \
   --remove \
-  --wheel-dir "${DEST_DIR}" \
-  "${WHEEL_PATH}"
+  "${WHEEL_PATH}" | tail -n 1)"
+
+if [[ "${NEW_WHEEL}" != /* ]]; then
+  NEW_WHEEL="$(dirname "${WHEEL_PATH}")/${NEW_WHEEL}"
+fi
+
+mv "${NEW_WHEEL}" "${DEST_DIR}/"
