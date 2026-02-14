@@ -29,13 +29,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            platform: linux-x64
             cibw_archs: x86_64
+            falkordb_asset: falkordb-x64.so
           - os: ubuntu-24.04-arm
+            platform: linux-arm64
             cibw_archs: aarch64
-          - os: macos-13
-            cibw_archs: x86_64
+            falkordb_asset: falkordb-arm64v8.so
           - os: macos-14
+            platform: macos-arm64
             cibw_archs: arm64
+            falkordb_asset: falkordb-macos-arm64v8.so
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -67,14 +71,63 @@ jobs:
           CIBW_ENVIRONMENT: >-
             REDIS_VERSION=${{ env.REDIS_VERSION }}
             FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+            FALKORDB_ASSET=${{ matrix.falkordb_asset }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          name: wheels-${{ matrix.platform }}
           path: ./wheelhouse/*.whl
 
-  publish:
+  smoke_test:
     needs: [build_wheels]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform }}
+          path: dist
+
+      - name: Install wheel
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+
+      - name: Smoke test binaries
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import falkordb_bin
+
+          redis_server = falkordb_bin.get_redis_server()
+          module_path = falkordb_bin.get_falkordb_module()
+
+          assert os.path.exists(redis_server), redis_server
+          assert os.path.exists(module_path), module_path
+          assert os.path.getsize(redis_server) > 0, redis_server
+          assert os.path.getsize(module_path) > 0, module_path
+
+          print("redis-server:", redis_server)
+          print("falkordb module:", module_path)
+          subprocess.run([redis_server, "--version"], check=True)
+          PY
+
+  publish:
+    needs: [build_wheels, smoke_test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
