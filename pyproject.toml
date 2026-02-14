@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "falkordb-bin"
+version = "1.4.0"
+description = "Precompiled redis-server and FalkorDB module binaries"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "FalkorDB inc", email = "info@falkordb.com" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+Homepage = "https://github.com/FalkorDB/falkordb-bin"
+Repository = "https://github.com/FalkorDB/falkordb-bin"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.package-data]
+falkordb_bin = ["bin/*"]
+
+[tool.setuptools.packages.find]
+include = ["falkordb_bin*"]
+
+[tool.cibuildwheel]
+build = "cp3*-*"
+skip = ["*-win32", "*-win_amd64", "*-manylinux_i686", "pp*", "*musllinux*"]
+archs = ["auto64"]
+test-command = "python -c 'import falkordb_bin; print(falkordb_bin.get_redis_server()); print(falkordb_bin.get_falkordb_module())'"
+
+[tool.cibuildwheel.linux]
+before-all = "bash scripts/build_redis.sh && bash scripts/download_falkordb.sh"
+
+[tool.cibuildwheel.macos]
+before-all = "bash scripts/build_redis.sh && bash scripts/download_falkordb.sh"
+
+[tool.cibuildwheel.environment]
+REDIS_VERSION = "8.2.3"
+FALKORDB_VERSION = "v4.16.3"

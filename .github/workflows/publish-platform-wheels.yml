@@ -1,0 +1,87 @@
+name: Publish Platform Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "falkordb-bin version (should match falkordb)"
+        required: true
+        default: "1.4.0"
+      redis_version:
+        description: "Redis version to build"
+        required: true
+        default: "8.2.3"
+      falkordb_version:
+        description: "FalkorDB release tag"
+        required: true
+        default: "v4.16.3"
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build_wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cibw_archs: x86_64
+          - os: ubuntu-24.04-arm
+            cibw_archs: aarch64
+          - os: macos-13
+            cibw_archs: x86_64
+          - os: macos-14
+            cibw_archs: arm64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set package version from input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+
+          version = "${{ inputs.package_version }}"
+          p = pathlib.Path("pyproject.toml")
+          text = p.read_text(encoding="utf-8")
+          text = re.sub(r'(?m)^version\s*=\s*"[^"]+"', f'version = "{version}"', text)
+          p.write_text(text, encoding="utf-8")
+          print(f"Updated package version to {version}")
+          PY
+
+      - name: Set build env versions
+        run: |
+          echo "REDIS_VERSION=${{ github.event.inputs.redis_version || '8.2.3' }}" >> "$GITHUB_ENV"
+          echo "FALKORDB_VERSION=${{ github.event.inputs.falkordb_version || 'v4.16.3' }}" >> "$GITHUB_ENV"
+
+      - uses: pypa/cibuildwheel@v2.23.2
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_ENVIRONMENT: >-
+            REDIS_VERSION=${{ env.REDIS_VERSION }}
+            FALKORDB_VERSION=${{ env.FALKORDB_VERSION }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
