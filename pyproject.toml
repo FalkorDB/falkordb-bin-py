@@ -45,6 +45,7 @@ test-command = "python -c 'import falkordb_bin; print(falkordb_bin.get_redis_ser
 
 [tool.cibuildwheel.linux]
 before-all = "bash scripts/build_redis.sh && bash scripts/download_falkordb.sh"
+repair-wheel-command = ""
 
 [tool.cibuildwheel.macos]
 before-all = "bash scripts/build_redis.sh && bash scripts/download_falkordb.sh"
